@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     const endDateTime = `${endDate} 23:59:59`;
 
     const whereClauses: string[] = [
-      '(payments.transaction_date BETWEEN ? AND ? OR payments.created_at BETWEEN ? AND ?)'
+      'payments.transaction_date BETWEEN ? AND ?'
     ];
-    const params: any[] = [startDateTime, endDateTime, startDateTime, endDateTime];
+    const params: any[] = [startDateTime, endDateTime];
 
     if (category !== 'all') {
       switch (category) {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       params
     );
 
-    const categoryParams: any[] = [startDateTime, endDateTime, startDateTime, endDateTime];
+    const categoryParams: any[] = [startDateTime, endDateTime];
     let channelFilterClause = '';
     if (channel !== 'all') {
       channelFilterClause = ' AND transaction_channel = ?';
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
         COUNT(CASE WHEN type IN (3, 7, 9) THEN 1 END) as fines_count,
         COALESCE(SUM(CASE WHEN type IN (3, 7, 9) THEN amount ELSE 0 END), 0) as fines_amount
        FROM payments
-       WHERE (transaction_date BETWEEN ? AND ? OR created_at BETWEEN ? AND ?)
+       WHERE transaction_date BETWEEN ? AND ?
        ${channelFilterClause}`,
       categoryParams
     );

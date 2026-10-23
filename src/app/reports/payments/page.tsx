@@ -18,19 +18,17 @@ import {
 function PaymentReportsContent() {
   const [user, setUser] = useState<any>(null);
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const past30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return past30.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
   const [category, setCategory] = useState('all');
   const [channel, setChannel] = useState('all');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-
-  useEffect(() => {
-    const today = new Date();
-    const past30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    setStartDate(past30.toISOString().split('T')[0]);
-    setEndDate(today.toISOString().split('T')[0]);
-  }, []);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);

@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
     const endDateTime = `${endDate} 23:59:59`;
 
     const whereClauses: string[] = [
-      '(payments.transaction_date BETWEEN ? AND ? OR payments.created_at BETWEEN ? AND ?)'
+      'payments.transaction_date BETWEEN ? AND ?'
     ];
-    const params: any[] = [startDateTime, endDateTime, startDateTime, endDateTime];
+    const params: any[] = [startDateTime, endDateTime];
 
     if (category !== 'all') {
       switch (category) {
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     const countSql = `
       SELECT COUNT(*) as total
       FROM payments
-      LEFT JOIN users ON users.id = payments.staff_id
+      ${search.trim() ? 'LEFT JOIN users ON users.id = payments.staff_id' : ''}
       ${whereSql}
     `;
     const [countRes] = await query<any>(countSql, params);
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
       FROM payments
       LEFT JOIN users ON users.id = payments.staff_id
       ${whereSql}
-      ORDER BY payments.id DESC
+      ORDER BY payments.transaction_date DESC, payments.id DESC
       LIMIT ? OFFSET ?
     `;
 

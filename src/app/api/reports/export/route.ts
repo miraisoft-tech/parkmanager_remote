@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
     const endDateTime = `${endDate} 23:59:59`;
 
     const whereClauses: string[] = [
-      '(payments.transaction_date BETWEEN ? AND ? OR payments.created_at BETWEEN ? AND ?)'
+      'payments.transaction_date BETWEEN ? AND ?'
     ];
-    const params: any[] = [startDateTime, endDateTime, startDateTime, endDateTime];
+    const params: any[] = [startDateTime, endDateTime];
 
     if (category !== 'all') {
       switch (category) {
