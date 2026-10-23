@@ -18,20 +18,22 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 
+const formatLocalDate = (d: Date = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 function ParkReportsContent() {
   const [user, setUser] = useState<any>(null);
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => formatLocalDate());
+  const [endDate, setEndDate] = useState(() => formatLocalDate());
   const [filter, setFilter] = useState('0');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setStartDate(today);
-    setEndDate(today);
-  }, []);
+  const [error, setError] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
@@ -45,6 +47,7 @@ function ParkReportsContent() {
     if (!startDate || !endDate) return;
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams({
         start_date: startDate,
         end_date: endDate,
@@ -55,17 +58,25 @@ function ParkReportsContent() {
       });
 
       const res = await fetch(`/api/reports/park?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setRows(data.rows || []);
-        setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
-        if (data.stats) {
-          setStats(data.stats);
-        }
+      if (res.status === 401) {
+        window.location.href = '/login?redirect=/reports/park';
+        return;
       }
-    } catch (err) {
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Server responded with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      setRows(data.rows || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.totalPages || 1);
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (err: any) {
       console.error('Error loading park movements:', err);
+      setError(err.message || 'Error loading vehicle movement records.');
     } finally {
       setLoading(false);
     }
@@ -88,26 +99,27 @@ function ParkReportsContent() {
 
   const handlePreset = (type: string) => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = formatLocalDate(now);
 
     if (type === 'today') {
       setStartDate(today);
       setEndDate(today);
     } else if (type === 'yesterday') {
-      const y = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      setStartDate(y);
-      setEndDate(y);
+      const y = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const yStr = formatLocalDate(y);
+      setStartDate(yStr);
+      setEndDate(yStr);
     } else if (type === '7days') {
-      const d7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      setStartDate(d7);
+      const d7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      setStartDate(formatLocalDate(d7));
       setEndDate(today);
     } else if (type === '30days') {
-      const d30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      setStartDate(d30);
+      const d30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      setStartDate(formatLocalDate(d30));
       setEndDate(today);
     } else if (type === 'month') {
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      setStartDate(startOfMonth);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      setStartDate(formatLocalDate(startOfMonth));
       setEndDate(today);
     }
     setPage(1);
@@ -312,6 +324,30 @@ function ParkReportsContent() {
 
           {/* Table Glass Panel */}
           <div className="glass-panel" style={{ padding: '24px' }}>
+            {error && (
+              <div style={{
+                padding: '14px 18px',
+                marginBottom: '20px',
+                borderRadius: '10px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#fca5a5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.85rem'
+              }}>
+                <span>{error}</span>
+                <button 
+                  onClick={() => fetchData()}
+                  className="btn btn-secondary" 
+                  style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                 Showing <strong>{rows.length > 0 ? (page - 1) * limit + 1 : 0}</strong> - <strong>{Math.min(page * limit, total)}</strong> of <strong>{formatNumber(total)}</strong> movements

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     `;
     const [statsRes] = await query<any>(statsSql, [startDateTime, endDateTime]);
 
-    // Data query with payment details when applicable
+    // Data query without heavy subqueries
     const dataSql = `
       SELECT 
         pr.id,
@@ -68,23 +68,8 @@ export async function GET(request: NextRequest) {
         pr.type,
         pr.operation,
         DATE_FORMAT(pr.generate_date, '%Y-%m-%d %H:%i:%s') as timein,
-        pr.out_date as timeout,
-        COALESCE(p.timespent, '') as timespent,
-        COALESCE(p.amount, 0) as amount,
-        CASE 
-          WHEN p.transaction_channel = 0 THEN 'Cash'
-          WHEN p.transaction_channel = 1 THEN 'POS'
-          WHEN p.transaction_channel = 2 THEN 'Online'
-          ELSE 'Nill'
-        END as paytype
+        pr.out_date as timeout
       FROM park_reports pr
-      LEFT JOIN (
-        SELECT access_id, timespent, amount, transaction_channel
-        FROM payments
-        WHERE id IN (
-          SELECT MAX(id) FROM payments GROUP BY access_id
-        )
-      ) p ON p.access_id = pr.ticket AND pr.operation = 'out'
       ${whereSql}
       ORDER BY pr.generate_date DESC, pr.id DESC
       LIMIT ? OFFSET ?
@@ -93,11 +78,52 @@ export async function GET(request: NextRequest) {
     const dataParams = [...params, limit, offset];
     const rows = await query<any>(dataSql, dataParams);
 
-    return NextResponse.json({
-      rows: rows.map(r => ({
+    // Fetch payments for exit records to get accurate duration and amount
+    const outTickets = [...new Set(rows.filter(r => r.operation === 'out' && r.ticket).map(r => r.ticket))];
+    const paymentMap = new Map<string, { timespent: string; amount: number; channel: number }>();
+
+    if (outTickets.length > 0) {
+      const placeholders = outTickets.map(() => '?').join(',');
+      const payments = await query<any>(
+        `SELECT access_id, timespent, amount, transaction_channel, id
+         FROM payments
+         WHERE access_id IN (${placeholders})
+         ORDER BY id DESC`,
+        outTickets
+      );
+
+      for (const p of payments) {
+        if (!paymentMap.has(p.access_id)) {
+          paymentMap.set(p.access_id, {
+            timespent: p.timespent || '',
+            amount: 0,
+            channel: p.transaction_channel
+          });
+        }
+        const entry = paymentMap.get(p.access_id)!;
+        entry.amount += Number(p.amount || 0);
+      }
+    }
+
+    const enrichedRows = rows.map(r => {
+      const pay = paymentMap.get(r.ticket);
+      let paytype = 'Nill';
+      if (pay) {
+        if (pay.channel === 0) paytype = 'Cash';
+        else if (pay.channel === 1) paytype = 'POS';
+        else if (pay.channel === 2) paytype = 'Online';
+      }
+
+      return {
         ...r,
-        amount: Number(r.amount || 0)
-      })),
+        timespent: pay ? pay.timespent : '',
+        amount: pay ? pay.amount : 0,
+        paytype
+      };
+    });
+
+    return NextResponse.json({
+      rows: enrichedRows,
       stats: {
         entry: Number(statsRes?.entry_count || 0),
         onetime: Number(statsRes?.onetime_count || 0),
