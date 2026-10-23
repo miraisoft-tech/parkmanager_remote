@@ -245,7 +245,7 @@ function PaymentReportsContent() {
                   onChange={(e) => { setCategory(e.target.value); setPage(1); }}
                 >
                   <option value="all">All Payment Categories</option>
-                  <option value="payment">Payment (Regular Parking)</option>
+                  <option value="payment">Regular Parking</option>
                   <option value="overnight">Overnight Parking</option>
                   <option value="subscribers">Subscribers Payment</option>
                   <option value="lost_tickets">Lost Tickets</option>
@@ -336,9 +336,9 @@ function PaymentReportsContent() {
               className={`category-card ${category === 'payment' ? 'active-filter' : ''}`}
               style={{ cursor: 'pointer', border: category === 'payment' ? '1px solid var(--accent-primary)' : undefined }}
               onClick={() => { setCategory(category === 'payment' ? 'all' : 'payment'); setPage(1); }}
-              title="Click to filter by Payment"
+              title="Click to filter by Regular Parking"
             >
-              <div className="cat-title">Payment (Regular)</div>
+              <div className="cat-title">Regular Parking</div>
               <div className="cat-amount">{formatCurrency(summary?.categories?.payment?.amount || summary?.categories?.onetime?.amount)}</div>
               <div className="cat-count">{formatNumber(summary?.categories?.payment?.count || summary?.categories?.onetime?.count)} tickets</div>
             </div>

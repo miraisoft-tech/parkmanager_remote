@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
         users.name as cashier_name,
         CASE 
           WHEN payments.type = 1 AND payments.timespent LIKE '%Overnite%' THEN 'Overnight'
-          WHEN payments.type = 1 THEN 'Payment'
+          WHEN payments.type = 1 THEN 'Regular Parking'
           WHEN payments.type = 2 THEN 'Subscribers Payment'
           WHEN payments.type = 3 THEN 'Expired Ticket'
           WHEN payments.type = 4 THEN 'Online Registration'

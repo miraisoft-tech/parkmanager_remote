@@ -124,12 +124,12 @@ export async function GET(request: NextRequest) {
       online_amount: Number(totals?.online_amount || 0),
       categories: {
         payment: {
-          label: 'Payment (Regular Parking)',
+          label: 'Regular Parking',
           count: Number(cats?.onetime_count || 0),
           amount: Number(cats?.onetime_amount || 0)
         },
         onetime: {
-          label: 'Payment (Regular Parking)',
+          label: 'Regular Parking',
           count: Number(cats?.onetime_count || 0),
           amount: Number(cats?.onetime_amount || 0)
         },
