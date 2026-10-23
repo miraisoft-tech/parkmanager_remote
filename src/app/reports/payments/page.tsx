@@ -165,8 +165,8 @@ function PaymentReportsContent() {
 
       <main className="app-main">
         <Navbar 
-          title="Park & Payment Reports" 
-          subtitle="Unified payments, Lost/Expired tickets, Overnight, Subscribers & Streaming Export" 
+          title="Sale Reports" 
+          subtitle="Financial reporting, revenue collection, payment categories breakdown & streaming export" 
         />
 
         <div className="app-content">
@@ -427,6 +427,20 @@ function PaymentReportsContent() {
               <div className="cat-title">Tag Payment</div>
               <div className="cat-amount">{formatCurrency(summary?.categories?.tag_payments?.amount)}</div>
               <div className="cat-count">{formatNumber(summary?.categories?.tag_payments?.count)} tags</div>
+            </div>
+
+            <div 
+              className={`category-card ${category === 'fines' ? 'active-filter' : ''}`}
+              style={{ cursor: 'pointer', border: category === 'fines' ? '1px solid var(--accent-rose)' : undefined }}
+              onClick={() => { setCategory(category === 'fines' ? 'all' : 'fines'); setPage(1); }}
+              title="Click to filter by Fine (All Fines)"
+            >
+              <div className="cat-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Fine (All Fines)</span>
+                <span className="badge badge-red" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>Fine</span>
+              </div>
+              <div className="cat-amount">{formatCurrency(summary?.categories?.fines?.amount)}</div>
+              <div className="cat-count">{formatNumber(summary?.categories?.fines?.count)} fines</div>
             </div>
           </div>
 

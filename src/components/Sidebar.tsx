@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Receipt, 
+  Car,
   LogOut, 
   Database,
   CircleCheck,
@@ -43,9 +44,15 @@ export default function Sidebar({ user }: SidebarProps) {
     },
     {
       href: '/reports/payments',
-      label: 'Park & Payment Reports',
+      label: 'Sale Reports',
       icon: Receipt,
       active: pathname.startsWith('/reports/payments')
+    },
+    {
+      href: '/reports/park',
+      label: 'Park Reports',
+      icon: Car,
+      active: pathname.startsWith('/reports/park')
     }
   ];
 
