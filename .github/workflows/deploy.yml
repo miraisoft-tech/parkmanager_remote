@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  APP_NAME: hinge_parkmanager
+  DEPLOY_PATH: /home/parkmanager
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+     
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Install dependencies and build Next.js app
+        run: npm run build 
+        
+      - name: Prepare Deployment Directory
+        run: |
+          rm -rf node_modules
+          rm -rf .git
+    
+      - name: Deploy to main
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+          TARGET: ${{ env.DEPLOY_PATH }}
+          EXCLUDE: "/node_modules/"
+
+      - name: Install deps & restart service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host:     ${{ secrets.REMOTE_HOST }}
+          port:     ${{ secrets.REMOTE_PORT }}
+          username: ${{ secrets.USERNAME }}
+          key:      ${{ secrets.PRIVATE_KEY }}
+          script: |
+            set -e
+            cd "${{ env.DEPLOY_PATH }}"
+
+            echo "==> Installing production dependencies..."
+            npm ci --omit=dev
+
+            echo "==> Restarting service..."
+            if command -v pm2 &> /dev/null; then
+              pm2 describe parkmanager &> /dev/null \
+                && pm2 restart parkmanager \
+                || pm2 start index.js --name parkmanager
+              pm2 save
+            else
+              # Fallback: systemd unit named parkmanager.service
+              sudo systemctl restart parkmanager.service
+            fi
+
+            echo "==> Deployment complete."
+  
