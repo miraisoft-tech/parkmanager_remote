@@ -43,31 +43,3 @@ jobs:
           REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
           TARGET: ${{ env.DEPLOY_PATH }}
           EXCLUDE: "/node_modules/"
-
-      - name: Install deps & restart service
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host:     ${{ secrets.REMOTE_HOST }}
-          port:     ${{ secrets.REMOTE_PORT }}
-          username: ${{ secrets.USERNAME }}
-          key:      ${{ secrets.PRIVATE_KEY }}
-          script: |
-            set -e
-            cd "${{ env.DEPLOY_PATH }}"
-
-            echo "==> Installing production dependencies..."
-            npm ci --omit=dev
-
-            echo "==> Restarting service..."
-            if command -v pm2 &> /dev/null; then
-              pm2 describe parkmanager &> /dev/null \
-                && pm2 restart parkmanager \
-                || pm2 start index.js --name parkmanager
-              pm2 save
-            else
-              # Fallback: systemd unit named parkmanager.service
-              sudo systemctl restart parkmanager.service
-            fi
-
-            echo "==> Deployment complete."
-  

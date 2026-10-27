@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Clock,
   ArrowDownRight,
-  ArrowUpRight
+  ArrowUpRight,
+  Download
 } from 'lucide-react';
 
 const formatLocalDate = (d: Date = new Date()) => {
@@ -42,6 +43,7 @@ function ParkReportsContent() {
   const [rows, setRows] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({ entry: 0, onetime: 0, regular: 0, exit: 0 });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!startDate || !endDate) return;
@@ -143,6 +145,20 @@ function ParkReportsContent() {
     return (val || 0).toLocaleString();
   };
 
+  const handleExport = () => {
+    setExporting(true);
+    const activeSearch = searchInput.trim() || search.trim();
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      filter,
+      ...(activeSearch ? { search: activeSearch } : {})
+    });
+
+    window.location.href = `/api/reports/park/export?${params.toString()}`;
+    setTimeout(() => setExporting(false), 2000);
+  };
+
   return (
     <div className="app-container">
       <Sidebar user={user} />
@@ -150,7 +166,7 @@ function ParkReportsContent() {
       <main className="app-main">
         <Navbar 
           title="Park Movement Reports" 
-          subtitle="Vehicle entries, exits, active sessions and outstanding tickets" 
+          subtitle="Vehicle entries, exits, active sessions, outstanding tickets & streaming export" 
         />
 
         <div className="app-content">
@@ -178,7 +194,7 @@ function ParkReportsContent() {
                 </button>
               </div>
 
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button 
                   onClick={() => fetchData()} 
                   className="btn btn-secondary"
@@ -186,6 +202,15 @@ function ParkReportsContent() {
                 >
                   <RefreshCw size={15} />
                   <span>Refresh</span>
+                </button>
+                <button 
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="btn btn-success"
+                  title="Export vehicle movements to CSV"
+                >
+                  {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  <span>Export to CSV</span>
                 </button>
               </div>
             </div>
@@ -353,19 +378,32 @@ function ParkReportsContent() {
                 Showing <strong>{rows.length > 0 ? (page - 1) * limit + 1 : 0}</strong> - <strong>{Math.min(page * limit, total)}</strong> of <strong>{formatNumber(total)}</strong> movements
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Per page:</span>
-                <select
-                  className="form-select"
-                  style={{ width: '80px', padding: '6px 10px', fontSize: '0.78rem' }}
-                  value={limit}
-                  onChange={(e) => { setLimit(parseInt(e.target.value, 10)); setPage(1); }}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting || total === 0}
+                  className="btn btn-secondary"
+                  style={{ padding: '5px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Export current filtered records to CSV"
                 >
-                  <option value={15}>15</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
+                  {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                  <span>Export CSV</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Per page:</span>
+                  <select
+                    className="form-select"
+                    style={{ width: '80px', padding: '6px 10px', fontSize: '0.78rem' }}
+                    value={limit}
+                    onChange={(e) => { setLimit(parseInt(e.target.value, 10)); setPage(1); }}
+                  >
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
               </div>
             </div>
 

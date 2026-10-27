@@ -6,6 +6,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const reportType = searchParams.get('report') || searchParams.get('type');
+    if (reportType === 'park') {
+      const parkExportUrl = new URL('/api/reports/park/export', request.url);
+      parkExportUrl.search = searchParams.toString();
+      return Response.redirect(parkExportUrl.toString(), 307);
+    }
+
     const startDate = searchParams.get('start_date') || new Date().toISOString().split('T')[0];
     const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0];
     const category = searchParams.get('category') || 'all';
