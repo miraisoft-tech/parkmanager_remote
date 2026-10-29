@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "pm2:start": "pm2 startOrRestart ecosystem.config.cjs --env production --update-env",
+    "pm2:restart": "pm2 restart ecosystem.config.cjs --update-env",
+    "pm2:stop": "pm2 stop ecosystem.config.cjs",
+    "pm2:logs": "pm2 logs hinge_parkmanager"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

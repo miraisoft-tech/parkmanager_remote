@@ -13,28 +13,27 @@ jobs:
   deployment:
     runs-on: ubuntu-latest
     steps:
-     
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: 'yarn'
 
-      - name: Install npm dependencies
+      - name: Install dependencies
         run: npm install
 
-      - name: Install dependencies and build Next.js app
-        run: npm run build 
-        
+      - name: Build Next.js app
+        run: npm run build
+
       - name: Prepare Deployment Directory
         run: |
           rm -rf node_modules
           rm -rf .git
-    
-      - name: Deploy to main
+
+      - name: Deploy files to VPS
         uses: easingthemes/ssh-deploy@main
         env:
           SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
@@ -42,4 +41,41 @@ jobs:
           REMOTE_USER: ${{ secrets.USERNAME }}
           REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
           TARGET: ${{ env.DEPLOY_PATH }}
-          EXCLUDE: "/node_modules/"
+          EXCLUDE: "/node_modules/,/.git/,/.env,/.env.local"
+
+      - name: Install production deps & restart PM2 service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          port: ${{ secrets.REMOTE_PORT || 22 }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          script: |
+            set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            source ~/.bashrc 2>/dev/null || true
+            source ~/.profile 2>/dev/null || true
+            export PATH="$PATH:/usr/local/bin:$HOME/.yarn/bin:$HOME/.local/share/pnpm"
+
+            cd "${{ env.DEPLOY_PATH }}"
+
+            echo "==> Installing production dependencies..."
+            npm install --omit=dev
+
+            if ! command -v pm2 &> /dev/null; then
+              echo "==> PM2 not found, installing globally..."
+              npm install -g pm2
+            fi
+
+            echo "==> Starting/Restarting ${{ env.APP_NAME }} with PM2..."
+            if [ -f ecosystem.config.cjs ]; then
+              pm2 startOrRestart ecosystem.config.cjs --env production --update-env
+            else
+              pm2 describe "${{ env.APP_NAME }}" &> /dev/null \
+                && pm2 restart "${{ env.APP_NAME }}" --update-env \
+                || pm2 start node_modules/next/dist/bin/next --name "${{ env.APP_NAME }}" -- start
+            fi
+            pm2 save
+
+            echo "==> Deployment complete."
